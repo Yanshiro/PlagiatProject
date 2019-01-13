@@ -1,11 +1,13 @@
-from pycparser import c_parser, c_ast
+import os,sys
 from pathlib import Path
-import os
-import re
+
+from pycparser import c_parser, c_ast
 
 parser = c_parser.CParser()
 datafolder = "data/"
 uploadfolder = "uploadfiles/"
+signature = "signature"
+schema = "schema"
 
 
 def initializefile():
@@ -65,26 +67,13 @@ def compare_asts(ast1, ast2):
     return True
 
 
-def compareScheme(ast1, ast2):
-    arrayast1 = []
-    arrayast1 = getScheme(ast1.ext[getIndexFctDef(ast1)].body.block_items, arrayast1)
-    arrayast2 = []
-    arrayast2 = getScheme(ast2.ext[getIndexFctDef(ast2)].body.block_items, arrayast2)
-    if len(arrayast1) != len(arrayast2):
-        return False
-    for (i, j) in zip(arrayast2, arrayast1):
-        if (i != j):
-            return False
-    return True
-
-
 def getScheme(ast1, array):
     for i, c in enumerate(ast1):
         if (type(c) != c_ast.Decl):
-                if(type(c) == c_ast.Assignment and type(ast1[i - 1]) == c_ast.Assignment):
-                    continue
-                else:
-                    array.append(str(type(c)))
+            if (type(c) == c_ast.Assignment and type(ast1[i - 1]) == c_ast.Assignment):
+                continue
+            else:
+                array.append(str(type(c)))
         if (hasattr(c, "stmt")):
             getScheme(c.stmt.block_items, array)
     return array
@@ -97,38 +86,49 @@ def getIndexFctDef(ast):
     return i
 
 
-def compareSignature(ast, ast2):
+def getSignature(ast):
+    array = []
     function_decl = ast.ext[getIndexFctDef(ast)].decl
     for param_decl in function_decl.type.args.params:
-        print('Type:')
-        print(type(param_decl.type))
-        param_decl.type.show(offset=6)
-    return False
+        array.append(type(param_decl.type))
+    return array
+
+
+def compare(ast1, ast2, type):
+    if (type == signature):
+        array = getSignature(ast1)
+        array2 = getSignature(ast2)
+    else:
+        array = []
+        array2 = []
+        array = getScheme(ast1.ext[getIndexFctDef(ast1)].body.block_items, array)
+        array2 = getScheme(ast2.ext[getIndexFctDef(ast2)].body.block_items, array2)
+    if len(array) != len(array2):
+        return False
+    for (i, j) in zip(array2, array):
+        if (i != j):
+            return False
+    return True
 
 
 def similarityCalculator(ast1, ast2):
-    if not (compareSignature(ast1, ast2)):
+    if not (compare(ast1, ast2, signature)):
         return 0
     if (compare_asts(ast1, ast2)):
         return 1
-    if (compareScheme(ast1, ast2)):
+    if (compare(ast1, ast2, schema)):
         return 2
+    else:
+        return -1
 
 
 def main():
-    initializefile()
+    # initializefile()
     c_file1 = getAstList()[0].read()
     c_file2 = getAstList()[1].read()
     ast1 = parser.parse(c_file1, filename='<none>')
     ast2 = parser.parse(c_file2, filename='<none>')
-    print(compare_asts(ast1, ast2))#true si copie conforme ou identique au nom de variable pres
-    print(compareScheme(ast1, ast2))#true si même schema
-
-
-# TODO
-# Signatures similarity
-# SimilarityCalculator to improve
-# view
+    sys.exit(similarityCalculator(ast1,ast2))
 
 if __name__ == "__main__":
     main()

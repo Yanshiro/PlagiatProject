@@ -1,68 +1,55 @@
 from pycparser import c_parser, c_ast
+from pathlib import Path
+import os
+import re
 
 parser = c_parser.CParser()
-
-text = r"""
-    typedef int Node, Hash;
-    void HashPrint(Hash* hash, void (*PrintFunc)(char*, char*))
-    {
-        unsigned int i;
-        if (hash == NULL || hash->heads == NULL)
-            return;
-        for (i = 0; i < hash->table_size; ++i)
-        {
-            Node* temp = hash->heads[i];
-            while (temp != NULL)
-            {
-                PrintFunc(temp->entry->key, temp->entry->value);
-                temp = temp->next;
-            }
-        }
-    }
-"""
-
-text2 = r"""
-    void counting_sort(int *tab, int taille)
-{
-  int i, min, max;
- 
-  min = max = tab[0];
-  for(i=1; i < taille; i++) {
-    if ( tab[i] < min ) {
-      min = tab[i];
-    } else  {
-      max = tab[i];
-    }
-    
-    min=3;
-  }
-}
-"""
+datafolder = "data/"
+uploadfolder = "uploadfiles/"
 
 
-text3 = r"""
-    void counng_sort(int *tableau, int n)
-{
-  int j, a, b;
-   int l, m, n;
+def initializefile():
+    createFiles("data/file1.txt")
+    createFiles("data/file2.txt")
+    c_file1 = getUploadedFile()[0]
+    c_file2 = getUploadedFile()[1]
+    f1 = open('data/file1.txt', 'a')
+    f2 = open('data/file2.txt', 'a')
+    copyCleanedFile(c_file1, f1)
+    copyCleanedFile(c_file2, f2)
 
-  a = b = tableau[0];
-  for(j=1; j < n; j++) {
-    if ( tableau[j]>a) {
-      a = tableau[j];
-    } else  {
-      b = tableau[j];
-    }
-    a=3;
-  }
-}
-"""
 
-ast1 = parser.parse(text2, filename='<none>');
-ast = parser.parse(text, filename='<none>');
-ast2 = parser.parse(text3, filename='<none>');
+def createFiles(name):
+    Path(name).touch()
 
-#changement nom variable et fct pris en compte
+
+def getUploadedFile():
+    uploadedFiles = []
+    for root, dirs, files in os.walk("uploadfiles"):
+        for file in files:
+            uploadedFiles.append(open(uploadfolder + "" + file, "r", encoding="utf-8"))
+    return uploadedFiles
+
+
+# TODO
+# handle comments
+def copyCleanedFile(fileinput, fileoutput):
+    d = fileinput.readlines()
+    fileinput.seek(0)
+    for i in d:
+        if not i.startswith("#include"):
+            fileoutput.write(i)
+    return fileoutput
+
+
+def getAstList():
+    c_files = []
+    for root, dirs, files in os.walk("data"):
+        for file in files:
+            c_files.append(open(datafolder + "" + file, "r", encoding="utf-8"))
+    return c_files
+
+
 def compare_asts(ast1, ast2):
     if type(ast1) != type(ast2):
         return False
@@ -77,32 +64,41 @@ def compare_asts(ast1, ast2):
             return False
     return True
 
-def compareScheme(ast1,ast2):
+
+def compareScheme(ast1, ast2):
     arrayast1 = []
     arrayast1 = getScheme(ast1.ext[getIndexFctDef(ast1)].body.block_items, arrayast1)
     arrayast2 = []
     arrayast2 = getScheme(ast2.ext[getIndexFctDef(ast2)].body.block_items, arrayast2)
-    for (i,j) in zip(arrayast2,arrayast1):
-        if(i!=j):
+    if len(arrayast1) != len(arrayast2):
+        return False
+    for (i, j) in zip(arrayast2, arrayast1):
+        if (i != j):
             return False
     return True
 
-def getScheme(ast1,array):
-    for i,c in enumerate(ast1):
-        if(type(c)!=c_ast.Decl):
-            array.append(str(type(c)))
-        if (hasattr(c,"stmt")):
-            getScheme(c.stmt.block_items,array)
+
+def getScheme(ast1, array):
+    for i, c in enumerate(ast1):
+        if (type(c) != c_ast.Decl):
+                if(type(c) == c_ast.Assignment and type(ast1[i - 1]) == c_ast.Assignment):
+                    continue
+                else:
+                    array.append(str(type(c)))
+        if (hasattr(c, "stmt")):
+            getScheme(c.stmt.block_items, array)
     return array
+
 
 def getIndexFctDef(ast):
     i = 0
-    while(type(ast.ext[i])!=c_ast.FuncDef):
+    while (type(ast.ext[i]) != c_ast.FuncDef):
         i += 1
     return i
 
-def compareSignature(ast,ast2):
-    function_decl=ast.ext[getIndexFctDef(ast)].decl
+
+def compareSignature(ast, ast2):
+    function_decl = ast.ext[getIndexFctDef(ast)].decl
     for param_decl in function_decl.type.args.params:
         print('Type:')
         print(type(param_decl.type))
@@ -110,29 +106,29 @@ def compareSignature(ast,ast2):
     return False
 
 
-def similarityCalculator(ast1,ast2):
-    if not (compareSignature(ast1,ast2)):
+def similarityCalculator(ast1, ast2):
+    if not (compareSignature(ast1, ast2)):
         return 0
-    if (compare_asts(ast1,ast2)):
+    if (compare_asts(ast1, ast2)):
         return 1
-    if(compareScheme(ast1,ast2)):
+    if (compareScheme(ast1, ast2)):
         return 2
 
+
 def main():
-    # print(compare_asts(ast1, ast2))
-    # print(compareScheme(ast1, ast2))
-    # list = []
-    # list = getScheme(ast.ext[getIndexFctDef(ast)].body.block_items, list)
-    # for j in list:
-    #     print(j)
-    print("hello world")
-    #TODO
-    #Check condition
-    #Check Assignement
-    #Signatures similarity
-    #SimilarityCalculator to improve
+    initializefile()
+    c_file1 = getAstList()[0].read()
+    c_file2 = getAstList()[1].read()
+    ast1 = parser.parse(c_file1, filename='<none>')
+    ast2 = parser.parse(c_file2, filename='<none>')
+    print(compare_asts(ast1, ast2))#true si copie conforme ou identique au nom de variable pres
+    print(compareScheme(ast1, ast2))#true si même schema
+
+
+# TODO
+# Signatures similarity
+# SimilarityCalculator to improve
+# view
 
 if __name__ == "__main__":
     main()
-
-

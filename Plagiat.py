@@ -1,4 +1,5 @@
-import os,sys
+import os
+import sys
 from pathlib import Path
 
 from pycparser import c_parser, c_ast
@@ -11,6 +12,9 @@ schema = "schema"
 
 
 def initializefile():
+    for root, dirs, files in os.walk("data"):
+        for file in files:
+            os.remove("data/"+file)
     createFiles("data/file1.txt")
     createFiles("data/file2.txt")
     c_file1 = getUploadedFile()[0]
@@ -32,9 +36,6 @@ def getUploadedFile():
             uploadedFiles.append(open(uploadfolder + "" + file, "r", encoding="utf-8"))
     return uploadedFiles
 
-
-# TODO
-# handle comments
 def copyCleanedFile(fileinput, fileoutput):
     d = fileinput.readlines()
     fileinput.seek(0)
@@ -123,12 +124,16 @@ def similarityCalculator(ast1, ast2):
 
 
 def main():
-    # initializefile()
-    c_file1 = getAstList()[0].read()
-    c_file2 = getAstList()[1].read()
-    ast1 = parser.parse(c_file1, filename='<none>')
-    ast2 = parser.parse(c_file2, filename='<none>')
-    sys.exit(similarityCalculator(ast1,ast2))
+    try:
+        initializefile()
+        c_file1 = getAstList()[0].read()
+        c_file2 = getAstList()[1].read()
+        ast1 = parser.parse(c_file1, filename='<none>')
+        ast2 = parser.parse(c_file2, filename='<none>')
+        sys.exit(similarityCalculator(ast1, ast2))
+    except IndexError:
+        sys.exit(-2)
+
 
 if __name__ == "__main__":
     main()

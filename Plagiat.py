@@ -9,18 +9,18 @@ datafolder = "data/"
 uploadfolder = "uploadfiles/"
 signature = "signature"
 schema = "schema"
-
+include = "#include"
 
 def initializefile():
     for root, dirs, files in os.walk("data"):
         for file in files:
-            os.remove("data/"+file)
-    createFiles("data/file1.txt")
-    createFiles("data/file2.txt")
+            os.remove(datafolder+file)
+    createFiles(datafolder+"file1.txt")
+    createFiles(datafolder+"file2.txt")
     c_file1 = getUploadedFile()[0]
     c_file2 = getUploadedFile()[1]
-    f1 = open('data/file1.txt', 'a')
-    f2 = open('data/file2.txt', 'a')
+    f1 = open(datafolder+'file1.txt', 'a')
+    f2 = open(datafolder+'file2.txt', 'a')
     copyCleanedFile(c_file1, f1)
     copyCleanedFile(c_file2, f2)
 
@@ -31,7 +31,7 @@ def createFiles(name):
 
 def getUploadedFile():
     uploadedFiles = []
-    for root, dirs, files in os.walk("uploadfiles"):
+    for root, dirs, files in os.walk(uploadfolder):
         for file in files:
             uploadedFiles.append(open(uploadfolder + "" + file, "r", encoding="utf-8"))
     return uploadedFiles
@@ -40,14 +40,14 @@ def copyCleanedFile(fileinput, fileoutput):
     d = fileinput.readlines()
     fileinput.seek(0)
     for i in d:
-        if not i.startswith("#include"):
+        if not i.startswith(include):
             fileoutput.write(i)
     return fileoutput
 
 
 def getAstList():
     c_files = []
-    for root, dirs, files in os.walk("data"):
+    for root, dirs, files in os.walk(datafolder):
         for file in files:
             c_files.append(open(datafolder + "" + file, "r", encoding="utf-8"))
     return c_files
@@ -70,11 +70,8 @@ def compare_asts(ast1, ast2):
 
 def getScheme(ast1, array):
     for i, c in enumerate(ast1):
-        if (type(c) != c_ast.Decl):
-            if (type(c) == c_ast.Assignment and type(ast1[i - 1]) == c_ast.Assignment):
-                continue
-            else:
-                array.append(str(type(c)))
+        if (type(c) != c_ast.Decl and not (type(c)==c_ast.Assignment)):
+            array.append(str(type(c)))
         if (hasattr(c, "stmt")):
             getScheme(c.stmt.block_items, array)
     return array

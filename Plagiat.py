@@ -127,7 +127,7 @@ def main():
         c_file2 = getAstList()[1].read()
         ast1 = parser.parse(c_file1, filename='<none>')
         ast2 = parser.parse(c_file2, filename='<none>')
-        sys.exit(similarityCalculator(ast1, ast2))
+        print(similarityCalculator(ast1, ast2))
     except IndexError:
         sys.exit(-2)
 

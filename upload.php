@@ -8,11 +8,10 @@
         if(!empty($name) && !empty($name2)){ 
             $location = 'uploadfiles/';      
             if(move_uploaded_file($temp_name, $location.$name) && move_uploaded_file($temp_name2, $location.$name2)){
-                echo 'File uploaded successfully';
+                header('Location: run.php');
             }
         }       
     }  else {
-        echo 'You should select a file to upload !!';
     }
 }
 ?>
